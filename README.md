@@ -6,5 +6,7 @@
 1.2 Если способ первый не зашел, есть еще один и универсальный способ(если у вас VS Code например). Активируйте VCS в IDE и пропишите в терминал следующую команду: git clone https://github.com/Victorious-hub/SolarTelemetry.git
 ![изображение](https://github.com/Victorious-hub/SolarTelemetry/assets/112483308/68303c5a-07f1-464a-a042-175d5af1df47)
 
+2. Установите все необходимые зависимости в терминале(также установите вирутальное окружение venv): pip install -r requirements.txt
+
 
 
