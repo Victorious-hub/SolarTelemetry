@@ -1,14 +1,10 @@
-import numpy as np
-import pandas as pd
-import tensorflow as tf
-import csv
-import matplotlib.pyplot as plt
 import os
 
-from sklearn.metrics import accuracy_score, precision_score, recall_score
-from sklearn.model_selection import train_test_split
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
 from tensorflow.keras import layers, losses
-from tensorflow.keras.datasets import fashion_mnist
 from tensorflow.keras.models import Model
 
 from dataset import get_temperature
