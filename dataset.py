@@ -1,6 +1,8 @@
 import csv
 import json
 import os.path
+import re
+from collections import defaultdict
 from datetime import datetime
 from os import walk
 
@@ -40,10 +42,14 @@ def check_file_exist(path: str):
 
 # .csv files from data-folder datasets(June_2019, July2019, August_2019, November_2019, October_2019, September_2019)
 def get_panels_dataset(path, panels):
+    get_days = set()
+    timestamp_sum = defaultdict(float)
+
     structure = ['timestamp', 'temperature', 'voltage', 'current', 'irradiation']
     x_train = []
     all_dataset = []
     ald = []
+    all_currents = []
 
     for filename in panels:
         path_to_filename = os.path.join(path, filename)
@@ -59,9 +65,21 @@ def get_panels_dataset(path, panels):
                 prev_curr = 0
                 prev_index = -1
                 for r in reader:
+
                     time = get_time(r['timestamp'])
                     current = float(r['current'])
+                    all_currents.append(current)
                     irradiating = float(r['irradiation'])
+
+
+                    pattern = r'^\w{3} \w{3} \d{2} \d{4}'
+                    match = re.match(pattern, r['utc_ts'])
+                    date_only = match.group()
+
+                    get_days.add(date_only)
+
+                    timestamp_sum[date_only] += current
+
                     voltage = float(r['voltage'])
                     temperature = float(r['temperature']) + 273.2
                     if prev_day != time.day:
@@ -71,21 +89,21 @@ def get_panels_dataset(path, panels):
                         prev_curr = 0
                         prev_index = -1
 
-                        if wtf_image and 100 <= len(wtf_image) < 200:
+                        if wtf_image and 100 <= len(wtf_image) <= 160:
                             i = len(wtf_image)
                             s = wtf_image[i - 1][0] + 1
-                            while i < 200:
+                            while i < 160:
                                 rx = [s, 0, 0, 0, 0]
                                 s = s + 1
                                 wtf_image.append(rx)
                                 # ald.append(rx)
                                 i = i + 1
 
-                        while len(wtf_image) > 200:
-                            if wtf_image and len(wtf_image) > 200:
-                                gap = len(wtf_image) - 200
-                                if gap > 200:
-                                    gap = 200
+                        while len(wtf_image) > 160:
+                            if wtf_image and len(wtf_image) > 160:
+                                gap = len(wtf_image) - 160
+                                if gap > 160:
+                                    gap = 160
                                 mid = int(len(wtf_image) / 2)
                                 wtf_image_tmp = []
                                 ald_tmp = []
@@ -101,26 +119,13 @@ def get_panels_dataset(path, panels):
                                     i = i + 1
                                 wtf_image = wtf_image_tmp
                                 ald = ald_tmp
-                        if wtf_image and len(wtf_image) == 200:
-                            """
-                            i = 74
-                            while i<125:
-                                wtf_image[i][2] = 0
-                                i = i + 1
-                            """
+                        if wtf_image and len(wtf_image) == 160:
                             x_train.append(wtf_image)
                             all_dataset.extend(ald)
                         ald = []
                         wtf_image = []
-                    """
-                    if time.hour >= 8 and time.hour < 20:
-                        counter += 1
-                        val = [float(r[s]) for s in structure]
-                        val[0] = float((time.hour - 8)*60 + time.minute)
-                        wtf_image.append(val)
-                        ald.append(r)
-                    """
-                    if 8 <= time.hour < 20 and 360 <= irradiating <= 1500:  # and current >=0 and current <=15 and temperature >= 25 and temperature <= 400
+
+                    if 8 <= time.hour < 20 and 360 <= irradiating <= 1500 and (len(all_currents) > 1 and all_currents[-2] != 0 and current/all_currents[-2] >= 0.5):  # and temperature >= 25 and temperature <= 400
                         index = float((time.hour - 8) * 60 + time.minute)
                         if index == prev_index:
                             index = index + 0.5
@@ -140,6 +145,10 @@ def get_panels_dataset(path, panels):
                                 prev_irr = irradiating
                                 prev_curr = current
                                 prev_index = index
+
+   # for day, timestamp_sum_value in timestamp_sum.items():
+   #     print(f"Day: {day}, Timestamp Sum: {timestamp_sum_value}")
+
     return x_train, all_dataset
 
 
@@ -172,22 +181,33 @@ def get_temperature():
             all_dataset.extend(a_dr)
         break
 
-    # structure = ['timestamp', 'temperature', 'voltage', 'current', 'irradiation']
-    # maxs = {f'{s}_max': max(float(d[s]) for d in all_dataset) for s in structure}
-    # mins = {f'{s}_min': min(float(d[s]) for d in all_dataset) for s in structure}
-    # print('maxs:', maxs, 'mins:', mins)
+    # Remove arrays with at least one element equal to zero
 
     x_train = np.asarray(x_train)
     x_test = np.asarray(x_test)
 
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
-    x_train = np.reshape(x_train, (len(x_train), 200, 5, 1))
-    x_test = np.reshape(x_test, (len(x_test), 200, 5, 1))
+
+    x_train = np.reshape(x_train, (len(x_train), 160, 5, 1))
+    x_test = np.reshape(x_test, (len(x_test), 160, 5, 1))
+
     return x_test, x_train
 
 
 if __name__ == '__main__':
     test, train = get_temperature()
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(train.tolist(), f, ensure_ascii=False, indent=4)
+
+    train_data = train.reshape(len(train), -1)
+
+    # non_zero_rows = np.any(train_data != 0, axis=(1, 2))
+
+    # filtered_train_data = train_data[non_zero_rows]
+
+    # condition = np.all(filtered_train_data == [False, True, True, True, True], axis=2)
+    # filtered_train_data = filtered_train_data[~condition]
+
+    with open('data.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        for row in train_data:
+            writer.writerow(row.flatten())

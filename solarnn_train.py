@@ -85,6 +85,7 @@ def draw_all(records, decoded_records, path, show=True, save=False):
 
 
 def save_to_csv(records, filename, path):
+    print(f"Records:{records}")
     f = open(path + '/' + filename, 'w')
     for val in records:
         for row in val:
@@ -214,6 +215,7 @@ callback_list = [weight_checkpoint_callback, tensorboard]
 
 autoencoder.compile(optimizer='adam', loss=losses.MeanSquaredError())
 
+print(f"Train:{x_input}")
 history = autoencoder.fit(x_input, x_output,
                           epochs=EPOCHS_NUM,
                           shuffle=True,

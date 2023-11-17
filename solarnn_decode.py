@@ -104,6 +104,7 @@ def check_existing_file(file_path):
 
 
 def save_info(vals, dec_vals, path):
+    print(vals.shape)
     if check_existing_file(path):
         return
 
@@ -213,6 +214,8 @@ class Autoencoder(Model):
 
 x_test, x_train = get_temperature()
 
+print(f"Train xxx:{x_train.shape}")
+
 x_input, x_output = split_data(x_train)
 y_input, y_output = split_data(x_test)
 
@@ -223,7 +226,7 @@ autoencoder.compile(optimizer='adam', loss=losses.MeanSquaredError())
 if len(x_input) == 0 or len(x_output) == 0:
     raise ValueError("Input data should not be empty.")
 
-# Продолжение выполнения кода
+print(f"Train:{x_input.shape}\nValidation:{y_input.shape}")
 autoencoder.fit(x_input, x_output,
                 epochs=EPOCHS_NUM,
                 shuffle=True,
@@ -237,5 +240,6 @@ decoded_vals = autoencoder.decoder(encoded_vals).numpy()
 
 x_test = concat_data(y_input, y_output)
 y_test = concat_data(y_input, decoded_vals)
+
 
 save_info(x_test, y_test, 'test')
