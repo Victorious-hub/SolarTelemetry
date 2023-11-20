@@ -49,7 +49,7 @@ def get_panels_dataset(path, panels):
     x_train = []
     all_dataset = []
     ald = []
-    all_currents = []
+    #all_currents = []
 
     for filename in panels:
         path_to_filename = os.path.join(path, filename)
@@ -57,6 +57,8 @@ def get_panels_dataset(path, panels):
             path_to_filename = os.path.join(path, filename.replace('.', '_'))
         if os.path.exists(f'{path_to_filename}.csv'):
             with open(f'{path_to_filename}.csv') as f:
+                array_irradiation = []
+                all_currents = []
                 reader = csv.DictReader(f, delimiter=";")
                 counter = 0
                 prev_day = 0
@@ -70,7 +72,7 @@ def get_panels_dataset(path, panels):
                     current = float(r['current'])
                     all_currents.append(current)
                     irradiating = float(r['irradiation'])
-
+                    array_irradiation.append(irradiating)
 
                     pattern = r'^\w{3} \w{3} \d{2} \d{4}'
                     match = re.match(pattern, r['utc_ts'])
@@ -93,32 +95,32 @@ def get_panels_dataset(path, panels):
                             i = len(wtf_image)
                             s = wtf_image[i - 1][0] + 1
                             while i < 160:
-                                rx = [s, 0, 0, 0, 0]
+                                rx = [s, 123, 123, 123, 123]
                                 s = s + 1
                                 wtf_image.append(rx)
                                 # ald.append(rx)
                                 i = i + 1
 
-                        while len(wtf_image) > 160:
-                            if wtf_image and len(wtf_image) > 160:
-                                gap = len(wtf_image) - 160
-                                if gap > 160:
-                                    gap = 160
-                                mid = int(len(wtf_image) / 2)
-                                wtf_image_tmp = []
-                                ald_tmp = []
-                                index = mid - (1 + 2 * (int((gap - 1) / 2)))
-                                i = 0
-                                while gap > 0:
-                                    if i != index:
-                                        wtf_image_tmp.append(wtf_image[i])
-                                        ald_tmp.append(ald[i])
-                                    else:
-                                        index = index + 2
-                                        gap = gap - 1
-                                    i = i + 1
-                                wtf_image = wtf_image_tmp
-                                ald = ald_tmp
+                        # while len(wtf_image) > 160:
+                        #     #if wtf_image and len(wtf_image) > 160:
+                        #         gap = len(wtf_image) - 160
+                        #         if gap > 160:
+                        #             gap = 160
+                        #         mid = int(len(wtf_image) / 2)
+                        #         wtf_image_tmp = []
+                        #         ald_tmp = []
+                        #         index = mid - (1 + 2 * (int((gap - 1) / 2)))
+                        #         i = 0
+                        #         while gap > 0:
+                        #             if i != index:
+                        #                 wtf_image_tmp.append(wtf_image[i])
+                        #                 ald_tmp.append(ald[i])
+                        #             else:
+                        #                 index = index + 2
+                        #                 gap = gap - 1
+                        #             i = i + 1
+                        #         wtf_image = wtf_image_tmp
+                        #         ald = ald_tmp
                         if wtf_image and len(wtf_image) == 160:
                             x_train.append(wtf_image)
                             all_dataset.extend(ald)
@@ -139,7 +141,7 @@ def get_panels_dataset(path, panels):
                                 counter += 1
                                 val = [float(r[s]) for s in structure]
                                 val[0] = index
-                                val[3] = val[3]
+                                # val[3] = val[3]
                                 wtf_image.append(val)
                                 ald.append(r)
                                 prev_irr = irradiating
@@ -149,7 +151,7 @@ def get_panels_dataset(path, panels):
    # for day, timestamp_sum_value in timestamp_sum.items():
    #     print(f"Day: {day}, Timestamp Sum: {timestamp_sum_value}")
 
-    return x_train, all_dataset
+    return x_train, all_dataset, all_currents, array_irradiation
 
 
 # get all modulesWithTemperatureDir folder datasets from data folder
@@ -165,20 +167,20 @@ def get_temperature():
     ]
     x_train = []
     x_test = []
-    all_dataset = []
+    # all_dataset = []
     for _, dirnames, filenames in walk(path_to_dataset):
         for dir_name in dirnames:
             print(dir_name, dirnames.index(dir_name) + 1, '/', len(dirnames))
             path = os.path.join(path_to_dataset, dir_name, temperature_dir_name)
             panels = get_list_panels()
-            x_tr, a_dr = get_panels_dataset(path, panels)
+            x_tr, a_dr, curr, irr = get_panels_dataset(path, panels)
             print(str(len(x_tr)) + ' test records found')
-            x_te, _ = get_panels_dataset(path, test_panel_names)
+            x_te, _, curr2, irr2 = get_panels_dataset(path, test_panel_names)
             print(str(len(x_te)) + ' test records found')
 
             x_train.extend(x_tr)
             x_test.extend(x_te)
-            all_dataset.extend(a_dr)
+            # all_dataset.extend(a_dr)
         break
 
     # Remove arrays with at least one element equal to zero
